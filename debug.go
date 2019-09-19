@@ -1,5 +1,3 @@
-// +build debug
-
 package poller
 
 import "log"
