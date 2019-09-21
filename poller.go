@@ -13,8 +13,8 @@ type Poller struct {
 	poller
 }
 
-// Register registers a file describtor with the Poller and returns a
-// Pollable which can be used for reading/writing as well as readiness
+// Register registers a file descriptor with the Poller and returns a
+// pollable which can be used for reading/writing as well as readiness
 // notification.
 //
 // File descriptors registered with the poller will be placed into
