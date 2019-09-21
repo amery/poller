@@ -42,7 +42,7 @@ func (e *epoll) register(fd uintptr) (*WaitPollable, error) {
 		poller: e,
 	}
 	ev := event{
-		events: syscall.EPOLLERR | syscall.EPOLLHUP,
+		events: EPOLLERR | EPOLLHUP,
 	}
 	ev.setdata(&p)
 	if err := epollctl(e.pollfd, syscall.EPOLL_CTL_ADD, fd, &ev); err != nil {
@@ -70,7 +70,7 @@ func (e *epoll) loop() {
 			continue
 		}
 		mode := int('r')
-		if ev.events&syscall.EPOLLOUT == syscall.EPOLLOUT {
+		if ev.events&EPOLLOUT == EPOLLOUT {
 			mode = 'w'
 		}
 		ev.getdata().wake(mode, nil)
@@ -101,7 +101,7 @@ func (e *epoll) wait() (*event, error) {
 
 func (e *epoll) waitRead(p *WaitPollable) error {
 	ev := event{
-		events: syscall.EPOLLONESHOT | syscall.EPOLLIN,
+		events: EPOLLONESHOT | EPOLLIN,
 	}
 	ev.setdata(p)
 	debug("epoll: waitRead: %d,  %0x, %p", p.fd, ev.events, ev.getdata())
@@ -109,7 +109,7 @@ func (e *epoll) waitRead(p *WaitPollable) error {
 }
 func (e *epoll) waitWrite(p *WaitPollable) error {
 	ev := event{
-		events: syscall.EPOLLONESHOT | syscall.EPOLLOUT,
+		events: EPOLLONESHOT | EPOLLOUT,
 	}
 	ev.setdata(p)
 	debug("epoll: waitWrite: %0x, %p", ev.events, ev.getdata())
