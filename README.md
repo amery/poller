@@ -11,13 +11,13 @@ reliable closing of file descriptors.
 
 
 
-## type Pollable
+## type WaitPollable
 ``` go
-type Pollable struct {
+type WaitPollable struct {
     // contains filtered or unexported fields
 }
 ```
-Pollable represents a file descriptor that can be read/written
+WaitPollable represents a file descriptor that can be read/written
 and polled/waited for readiness notification.
 
 
@@ -30,17 +30,17 @@ and polled/waited for readiness notification.
 
 
 
-### func (\*Pollable) Close
+### func (\*WaitPollable) Close
 ``` go
-func (p *Pollable) Close() error
+func (p *WaitPollable) Close() error
 ```
-Close deregisters the Pollable and closes the underlying file descriptor.
+Close deregisters the WaitPollable and closes the underlying file descriptor.
 
 
 
-### func (\*Pollable) Read
+### func (\*WaitPollable) Read
 ``` go
-func (p *Pollable) Read(b []byte) (int, error)
+func (p *WaitPollable) Read(b []byte) (int, error)
 ```
 Read reads up to len(b) bytes from the underlying fd. It returns the number of
 bytes read and an error, if any. EOF is signaled by a zero count with
@@ -50,27 +50,27 @@ Callers to Read will block if there is no data available to read.
 
 
 
-### func (\*Pollable) WaitRead
+### func (\*WaitPollable) WaitRead
 ``` go
-func (p *Pollable) WaitRead() error
+func (p *WaitPollable) WaitRead() error
 ```
-WaitRead waits for the Pollable to become ready for
+WaitRead waits for the WaitPollable to become ready for
 reading.
 
 
 
-### func (\*Pollable) WaitWrite
+### func (\*WaitPollable) WaitWrite
 ``` go
-func (p *Pollable) WaitWrite() error
+func (p *WaitPollable) WaitWrite() error
 ```
-WaitWrite waits for the Pollable to become ready for
+WaitWrite waits for the WaitPollable to become ready for
 writing.
 
 
 
-### func (\*Pollable) Write
+### func (\*WaitPollable) Write
 ``` go
-func (p *Pollable) Write(b []byte) (int, error)
+func (p *WaitPollable) Write(b []byte) (int, error)
 ```
 Write writes len(b) bytes to the fd. It returns the number of bytes
 written and an error, if any. Write returns a non-nil error when n !=
@@ -108,10 +108,10 @@ New creates a new Poller.
 
 ### func (\*Poller) Register
 ``` go
-func (p *Poller) Register(fd uintptr) (*Pollable, error)
+func (p *Poller) Register(fd uintptr) (*WaitPollable, error)
 ```
 Register registers a file descriptor with the Poller and returns a
-Pollable which can be used for reading/writing as well as readiness
+WaitPollable which can be used for reading/writing as well as readiness
 notification.
 
 File descriptors registered with the poller will be placed into

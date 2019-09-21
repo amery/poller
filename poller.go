@@ -19,16 +19,16 @@ type Poller struct {
 //
 // File descriptors registered with the poller will be placed into
 // non-blocking mode.
-func (p *Poller) Register(fd uintptr) (*Pollable, error) {
+func (p *Poller) Register(fd uintptr) (*WaitPollable, error) {
 	if err := syscall.SetNonblock(int(fd), true); err != nil {
 		return nil, err
 	}
 	return p.register(fd)
 }
 
-// Pollable represents a file descriptor that can be read/written
+// WaitPollable represents a file descriptor that can be read/written
 // and polled/waited for readiness notification.
-type Pollable struct {
+type WaitPollable struct {
 	fd     uintptr
 	cr, cw chan error
 	poller
@@ -39,7 +39,7 @@ type Pollable struct {
 // err set to io.EOF.
 //
 // Callers to Read will block if there is no data available to read.
-func (p *Pollable) Read(b []byte) (int, error) {
+func (p *WaitPollable) Read(b []byte) (int, error) {
 	n, e := p.read(b)
 	if n < 0 {
 		n = 0
@@ -53,7 +53,7 @@ func (p *Pollable) Read(b []byte) (int, error) {
 	return n, nil
 }
 
-func (p *Pollable) read(b []byte) (int, error) {
+func (p *WaitPollable) read(b []byte) (int, error) {
 	for {
 		n, e := syscall.Read(int(p.fd), b)
 		if e != syscall.EAGAIN {
@@ -70,7 +70,7 @@ func (p *Pollable) read(b []byte) (int, error) {
 // len(b).
 //
 // Callers to Write will block if there is no buffer capacity available.
-func (p *Pollable) Write(b []byte) (int, error) {
+func (p *WaitPollable) Write(b []byte) (int, error) {
 	n, e := p.write(b)
 	if n < 0 {
 		n = 0
@@ -84,7 +84,7 @@ func (p *Pollable) Write(b []byte) (int, error) {
 	return n, nil
 }
 
-func (p *Pollable) write(b []byte) (int, error) {
+func (p *WaitPollable) write(b []byte) (int, error) {
 	for {
 		// TODO(dfc) this is wrong
 		n, e := syscall.Write(int(p.fd), b)
@@ -97,16 +97,16 @@ func (p *Pollable) write(b []byte) (int, error) {
 	}
 }
 
-// Close deregisters the Pollable and closes the underlying file descriptor.
-func (p *Pollable) Close() error {
+// Close deregisters the WaitPollable and closes the underlying file descriptor.
+func (p *WaitPollable) Close() error {
 	err := p.deregister(p)
 	// p.fd = uintptr(-1) // TODO(dfc) fix
 	return err
 }
 
-// WaitRead waits for the Pollable to become ready for
+// WaitRead waits for the WaitPollable to become ready for
 // reading.
-func (p *Pollable) WaitRead() error {
+func (p *WaitPollable) WaitRead() error {
 	debug("pollable: %p, fd: %v  waitread", p, p.fd)
 	if err := p.poller.waitRead(p); err != nil {
 		return err
@@ -114,16 +114,16 @@ func (p *Pollable) WaitRead() error {
 	return <-p.cr
 }
 
-// WaitWrite waits for the Pollable to become ready for
+// WaitWrite waits for the WaitPollable to become ready for
 // writing.
-func (p *Pollable) WaitWrite() error {
+func (p *WaitPollable) WaitWrite() error {
 	if err := p.poller.waitWrite(p); err != nil {
 		return err
 	}
 	return <-p.cw
 }
 
-func (p *Pollable) wake(mode int, err error) {
+func (p *WaitPollable) wake(mode int, err error) {
 	debug("pollable: %p, fd: %v wake: %c, %v", p, p.fd, mode, err)
 	if mode == 'r' {
 		p.cr <- err
@@ -133,8 +133,8 @@ func (p *Pollable) wake(mode int, err error) {
 }
 
 type poller interface {
-	register(fd uintptr) (*Pollable, error)
-	waitRead(*Pollable) error
-	waitWrite(*Pollable) error
-	deregister(*Pollable) error
+	register(fd uintptr) (*WaitPollable, error)
+	waitRead(*WaitPollable) error
+	waitWrite(*WaitPollable) error
+	deregister(*WaitPollable) error
 }

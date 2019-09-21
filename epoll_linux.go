@@ -34,8 +34,8 @@ type epoll struct {
 	events   []event
 }
 
-func (e *epoll) register(fd uintptr) (*Pollable, error) {
-	p := Pollable{
+func (e *epoll) register(fd uintptr) (*WaitPollable, error) {
+	p := WaitPollable{
 		fd:     fd,
 		cr:     make(chan error),
 		cw:     make(chan error),
@@ -52,7 +52,7 @@ func (e *epoll) register(fd uintptr) (*Pollable, error) {
 	return &p, nil
 }
 
-func (e *epoll) deregister(p *Pollable) error {
+func (e *epoll) deregister(p *WaitPollable) error {
 	// TODO(dfc) // wakeup all other waiters ?
 	return epollctl(e.pollfd, syscall.EPOLL_CTL_DEL, p.fd, nil)
 }
@@ -99,7 +99,7 @@ func (e *epoll) wait() (*event, error) {
 	return &ev, nil
 }
 
-func (e *epoll) waitRead(p *Pollable) error {
+func (e *epoll) waitRead(p *WaitPollable) error {
 	ev := event{
 		events: syscall.EPOLLONESHOT | syscall.EPOLLIN,
 	}
@@ -107,7 +107,7 @@ func (e *epoll) waitRead(p *Pollable) error {
 	debug("epoll: waitRead: %d,  %0x, %p", p.fd, ev.events, ev.getdata())
 	return epollctl(e.pollfd, syscall.EPOLL_CTL_MOD, p.fd, &ev)
 }
-func (e *epoll) waitWrite(p *Pollable) error {
+func (e *epoll) waitWrite(p *WaitPollable) error {
 	ev := event{
 		events: syscall.EPOLLONESHOT | syscall.EPOLLOUT,
 	}
