@@ -8,7 +8,7 @@ import (
 // WaitPollable represents a file descriptor that can be read/written
 // and polled/waited for readiness notification.
 type WaitPollable struct {
-	*pollable
+	*Pollable
 	cr, cw chan error
 }
 
@@ -21,7 +21,7 @@ func NewWaitPollable(poller *Poller, fd uintptr) (*WaitPollable, error) {
 	if pp, err := poller.RegisterHandler(fd, waitHandler, p); err != nil {
 		return nil, err
 	} else {
-		p.pollable = pp
+		p.Pollable = pp
 		return p, nil
 	}
 }
@@ -111,9 +111,9 @@ func (p *WaitPollable) write(b []byte) (int, error) {
 	}
 }
 
-// Close deregisters the pollable and closes the underlying file descriptor.
+// Close deregisters the Pollable and closes the underlying file descriptor.
 func (p *WaitPollable) Close() error {
-	err := p.pollable.Close()
+	err := p.Pollable.Close()
 	close(p.cr)
 	close(p.cw)
 	return err
@@ -122,8 +122,8 @@ func (p *WaitPollable) Close() error {
 // WaitRead waits for the WaitPollable to become ready for
 // reading.
 func (p *WaitPollable) WaitRead() error {
-	debug("pollable: %p, fd: %v  waitread", p, p.fd)
-	if err := p.poller.waitRead(p.pollable); err != nil {
+	debug("Pollable: %p, fd: %v  waitread", p, p.fd)
+	if err := p.poller.waitRead(p.Pollable); err != nil {
 		return err
 	}
 	return <-p.cr
@@ -132,14 +132,14 @@ func (p *WaitPollable) WaitRead() error {
 // WaitWrite waits for the WaitPollable to become ready for
 // writing.
 func (p *WaitPollable) WaitWrite() error {
-	if err := p.poller.waitWrite(p.pollable); err != nil {
+	if err := p.poller.waitWrite(p.Pollable); err != nil {
 		return err
 	}
 	return <-p.cw
 }
 
 func (p *WaitPollable) wake(mode int, err error) {
-	debug("pollable: %p, fd: %v wake: %c, %v", p, p.fd, mode, err)
+	debug("Pollable: %p, fd: %v wake: %c, %v", p, p.fd, mode, err)
 	if mode == 'r' {
 		p.cr <- err
 	} else {

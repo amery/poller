@@ -13,10 +13,10 @@ import (
 //
 //    type event struct {
 //          events uint32
-//          data   *pollable
+//          data   *Pollable
 //    }
 //
-// and then epollwait will return us *event's that contain the pointer to the *pollable that
+// and then epollwait will return us *event's that contain the pointer to the *Pollable that
 // the event describes -- however it's not that simple.
 //
 // 1. On 64bit platforms, a pointer is 64bits, so will be 64bit alliged, as the field before
@@ -24,7 +24,7 @@ import (
 //    event is 16 bytes, not 12, so a []event will be incorrectly aligned.
 //
 //    Also, because of the invisible padding, the pointer stored in data is truncated, ie only
-//    the bottom 4 bytes are preserved, so calling a method on the *pollable returned will
+//    the bottom 4 bytes are preserved, so calling a method on the *Pollable returned will
 //    segfault.
 //
 // 2. On 32bit platforms the opposite is true. The size of data is 32bits, and thus requires no
@@ -33,7 +33,7 @@ import (
 //    8 bytes, not the expected 12.
 //
 // To overcome the problem, this declaration handles data as 8 bytes of memory then we use
-// unsafe to convert the value to/from a *pollable as required. For 32 bit platforms, the
+// unsafe to convert the value to/from a *Pollable as required. For 32 bit platforms, the
 // declaration is simple and includes the required padding.
 //
 // On both platforms getdata and setdata inline so the cost of this slight of hand is minimal.
@@ -42,10 +42,10 @@ type event struct {
 	data   [2]uint32
 }
 
-func (e *event) setdata(p *pollable) {
-	*(**pollable)(unsafe.Pointer(&e.data[0])) = p
+func (e *event) setdata(p *Pollable) {
+	*(**Pollable)(unsafe.Pointer(&e.data[0])) = p
 }
 
-func (e *event) getdata() *pollable {
-	return *(**pollable)(unsafe.Pointer(&e.data[0]))
+func (e *event) getdata() *Pollable {
+	return *(**Pollable)(unsafe.Pointer(&e.data[0]))
 }

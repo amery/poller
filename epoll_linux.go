@@ -34,8 +34,8 @@ type epoll struct {
 	events   []event
 }
 
-func (e *epoll) register(fd uintptr, h EventHandler, data interface{}) (*pollable, error) {
-	p := pollable{
+func (e *epoll) register(fd uintptr, h EventHandler, data interface{}) (*Pollable, error) {
+	p := Pollable{
 		fd:      fd,
 		data:    data,
 		handler: h,
@@ -52,7 +52,7 @@ func (e *epoll) register(fd uintptr, h EventHandler, data interface{}) (*pollabl
 	return &p, nil
 }
 
-func (e *epoll) deregister(p *pollable) error {
+func (e *epoll) deregister(p *Pollable) error {
 	// TODO(dfc) // wakeup all other waiters ?
 	return epollctl(e.pollfd, syscall.EPOLL_CTL_DEL, p.fd, nil)
 }
@@ -96,7 +96,7 @@ func (e *epoll) wait() (*event, error) {
 	return &ev, nil
 }
 
-func (e *epoll) wantEvent(p *pollable, events uint32, oneshot bool) error {
+func (e *epoll) wantEvent(p *Pollable, events uint32, oneshot bool) error {
 	if events == 0 {
 		events = EPOLLERR | EPOLLHUP
 	} else if oneshot {
@@ -126,11 +126,11 @@ func (e *epoll) wantEvent(p *pollable, events uint32, oneshot bool) error {
 	return nil
 }
 
-func (e *epoll) waitRead(p *pollable) error {
+func (e *epoll) waitRead(p *Pollable) error {
 	return e.wantEvent(p, EPOLLIN, true)
 }
 
-func (e *epoll) waitWrite(p *pollable) error {
+func (e *epoll) waitWrite(p *Pollable) error {
 	return e.wantEvent(p, EPOLLOUT, true)
 }
 

@@ -3,13 +3,13 @@ package poller
 type event struct {
 	events uint32
 	_      uint32
-	data   *pollable
+	data   *Pollable
 }
 
-func (e *event) setdata(p *pollable) {
+func (e *event) setdata(p *Pollable) {
 	e.data = p
 }
 
-func (e *event) getdata() *pollable {
+func (e *event) getdata() *Pollable {
 	return e.data
 }

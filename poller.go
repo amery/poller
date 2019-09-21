@@ -12,7 +12,7 @@ const (
 
 type EventHandler func(fd uintptr, revents uint32, data interface{})
 
-type pollable struct {
+type Pollable struct {
 	fd      uintptr
 	data    interface{}
 	events  uint32
@@ -27,23 +27,23 @@ type Poller struct {
 }
 
 // RegisterHandler registers a file descriptor with the Poller and returns a
-// pollable which can be used for reading/writing as well as readiness
+// Pollable which can be used for reading/writing as well as readiness
 // notification.
 //
 // File descriptors registered with the poller will be placed into
 // non-blocking mode.
-func (p *Poller) RegisterHandler(fd uintptr, h EventHandler, data interface{}) (*pollable, error) {
+func (p *Poller) RegisterHandler(fd uintptr, h EventHandler, data interface{}) (*Pollable, error) {
 	if err := syscall.SetNonblock(int(fd), true); err != nil {
 		return nil, err
 	}
 	return p.register(fd, h, data)
 }
 
-func (p *pollable) Fd() uintptr {
+func (p *Pollable) Fd() uintptr {
 	return p.fd
 }
 
-func (p *pollable) Close() error {
+func (p *Pollable) Close() error {
 	if fd := p.fd; fd != ClosedFd {
 		p.poller.deregister(p)
 		p.fd = ClosedFd
@@ -53,9 +53,9 @@ func (p *pollable) Close() error {
 }
 
 type poller interface {
-	register(fd uintptr, h EventHandler, data interface{}) (*pollable, error)
-	waitRead(*pollable) error
-	waitWrite(*pollable) error
-	wantEvent(*pollable, uint32, bool) error
-	deregister(*pollable) error
+	register(fd uintptr, h EventHandler, data interface{}) (*Pollable, error)
+	waitRead(*Pollable) error
+	waitWrite(*Pollable) error
+	wantEvent(*Pollable, uint32, bool) error
+	deregister(*Pollable) error
 }
