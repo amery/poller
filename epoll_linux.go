@@ -34,12 +34,12 @@ type epoll struct {
 	events   []event
 }
 
-func (e *epoll) register(fd uintptr) (*WaitPollable, error) {
-	p := WaitPollable{
-		fd:     fd,
-		cr:     make(chan error),
-		cw:     make(chan error),
-		poller: e,
+func (e *epoll) register(fd uintptr, h EventHandler, data interface{}) (*pollable, error) {
+	p := pollable{
+		fd:      fd,
+		data:    data,
+		handler: h,
+		poller:  e,
 	}
 	ev := event{
 		events: EPOLLERR | EPOLLHUP,
@@ -52,7 +52,7 @@ func (e *epoll) register(fd uintptr) (*WaitPollable, error) {
 	return &p, nil
 }
 
-func (e *epoll) deregister(p *WaitPollable) error {
+func (e *epoll) deregister(p *pollable) error {
 	// TODO(dfc) // wakeup all other waiters ?
 	return epollctl(e.pollfd, syscall.EPOLL_CTL_DEL, p.fd, nil)
 }
@@ -69,11 +69,8 @@ func (e *epoll) loop() {
 			// timeout / wakeup ?
 			continue
 		}
-		mode := int('r')
-		if ev.events&EPOLLOUT == EPOLLOUT {
-			mode = 'w'
-		}
-		ev.getdata().wake(mode, nil)
+		p := ev.getdata()
+		p.handler(p.fd, ev.events, p.data)
 	}
 }
 
@@ -99,21 +96,42 @@ func (e *epoll) wait() (*event, error) {
 	return &ev, nil
 }
 
-func (e *epoll) waitRead(p *WaitPollable) error {
-	ev := event{
-		events: EPOLLONESHOT | EPOLLIN,
+func (e *epoll) wantEvent(p *pollable, events uint32, oneshot bool) error {
+	if events == 0 {
+		events = EPOLLERR | EPOLLHUP
+	} else if oneshot {
+		events |= EPOLLONESHOT
+	} else {
+		events &= ^EPOLLONESHOT
 	}
-	ev.setdata(p)
-	debug("epoll: waitRead: %d,  %0x, %p", p.fd, ev.events, ev.getdata())
-	return epollctl(e.pollfd, syscall.EPOLL_CTL_MOD, p.fd, &ev)
+
+	if p.events != events {
+		ev := event{
+			events: events,
+		}
+		ev.setdata(p)
+		debug("epoll: wantEvent: %d,  %0x, %p", p.fd, ev.events, ev.getdata())
+
+		if err := epollctl(e.pollfd, syscall.EPOLL_CTL_MOD, p.fd, &ev); err != nil {
+			return err
+		}
+
+		if oneshot {
+			p.events = 0
+		} else {
+			p.events = events
+		}
+	}
+
+	return nil
 }
-func (e *epoll) waitWrite(p *WaitPollable) error {
-	ev := event{
-		events: EPOLLONESHOT | EPOLLOUT,
-	}
-	ev.setdata(p)
-	debug("epoll: waitWrite: %0x, %p", ev.events, ev.getdata())
-	return epollctl(e.pollfd, syscall.EPOLL_CTL_MOD, p.fd, &ev)
+
+func (e *epoll) waitRead(p *pollable) error {
+	return e.wantEvent(p, EPOLLIN, true)
+}
+
+func (e *epoll) waitWrite(p *pollable) error {
+	return e.wantEvent(p, EPOLLOUT, true)
 }
 
 func epollCreate1() (uintptr, error) {
