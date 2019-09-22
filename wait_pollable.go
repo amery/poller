@@ -119,11 +119,19 @@ func (p *WaitPollable) Close() error {
 	return err
 }
 
+func (p *WaitPollable) wantRead() error {
+	return p.poller.wantEvent(p.Pollable, EPOLLIN, true)
+}
+
+func (p *WaitPollable) wantWrite() error {
+	return p.poller.wantEvent(p.Pollable, EPOLLOUT, true)
+}
+
 // WaitRead waits for the WaitPollable to become ready for
 // reading.
 func (p *WaitPollable) WaitRead() error {
 	debug("Pollable: %p, fd: %v  waitread", p, p.fd)
-	if err := p.poller.waitRead(p.Pollable); err != nil {
+	if err := p.wantRead(); err != nil {
 		return err
 	}
 	return <-p.cr
@@ -132,7 +140,8 @@ func (p *WaitPollable) WaitRead() error {
 // WaitWrite waits for the WaitPollable to become ready for
 // writing.
 func (p *WaitPollable) WaitWrite() error {
-	if err := p.poller.waitWrite(p.Pollable); err != nil {
+	debug("Pollable: %p, fd: %v  waitwrite", p, p.fd)
+	if err := p.wantWrite(); err != nil {
 		return err
 	}
 	return <-p.cw

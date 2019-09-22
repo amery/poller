@@ -126,14 +126,6 @@ func (e *epoll) wantEvent(p *Pollable, events uint32, oneshot bool) error {
 	return nil
 }
 
-func (e *epoll) waitRead(p *Pollable) error {
-	return e.wantEvent(p, EPOLLIN, true)
-}
-
-func (e *epoll) waitWrite(p *Pollable) error {
-	return e.wantEvent(p, EPOLLOUT, true)
-}
-
 func epollCreate1() (uintptr, error) {
 	fd, _, e := syscall.Syscall(syscall.SYS_EPOLL_CREATE1, syscall.EPOLL_CLOEXEC, 0, 0)
 	if e != 0 {
