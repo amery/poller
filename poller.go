@@ -39,6 +39,14 @@ func (p *Poller) RegisterHandler(fd uintptr, h EventHandler, data interface{}) (
 	return p.register(fd, h, data)
 }
 
+func (p *Poller) Close() error {
+	if err := p.poller.Abort(nil); err != nil {
+		return err
+	}
+
+	return p.poller.Done()
+}
+
 func (p *Pollable) Fd() uintptr {
 	if p != nil {
 		return p.fd
@@ -60,4 +68,7 @@ type poller interface {
 	register(fd uintptr, h EventHandler, data interface{}) (*Pollable, error)
 	WantEvents(*Pollable, uint32, bool) error
 	deregister(*Pollable) error
+
+	Abort(error) error
+	Done() error
 }

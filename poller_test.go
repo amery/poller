@@ -11,7 +11,7 @@ func TestWaitRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//defer p.Close()
+	defer p.Close()
 
 	pr, pw, err := os.Pipe()
 	if err != nil {

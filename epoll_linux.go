@@ -21,7 +21,10 @@ func newEpoll() (poller, error) {
 		return nil, err
 	}
 	e := epoll{
-		pollfd: fd,
+		pollfd:  fd,
+		running: true,
+		abort:   make(chan error),
+		done:    make(chan error),
 	}
 	go e.loop()
 	return &e, nil
@@ -29,9 +32,10 @@ func newEpoll() (poller, error) {
 
 // epoll implements an epoll(2) based poller.
 type epoll struct {
-	pollfd   uintptr
-	eventbuf [0x10]event
-	events   []event
+	pollfd  uintptr
+	running bool
+	abort   chan error
+	done    chan error
 }
 
 func (e *epoll) register(fd uintptr, h EventHandler, data interface{}) (*Pollable, error) {
@@ -58,42 +62,52 @@ func (e *epoll) deregister(p *Pollable) error {
 }
 
 func (e *epoll) loop() {
+	ch := make(chan event)
+	go e.waiter(ch)
+
 	defer syscall.Close(int(e.pollfd))
-	for {
-		ev, err := e.wait()
-		if err != nil {
-			println(err.Error())
-			return
+
+	for e.running {
+		select {
+		case ev, ok := <-ch:
+			if ok {
+				p := ev.getdata()
+				p.handler(p.fd, ev.events, p.data)
+			}
+		case err, ok := <-e.abort:
+			if ok {
+				e.running = false
+				e.done <- err
+			}
 		}
-		if ev == nil {
-			// timeout / wakeup ?
-			continue
-		}
-		p := ev.getdata()
-		p.handler(p.fd, ev.events, p.data)
 	}
 }
 
-func (e *epoll) wait() (*event, error) {
-	for len(e.events) == 0 {
-		const msec = -1
-		n, err := epollwait(e.pollfd, e.eventbuf[0:], msec)
-		debug("epoll: epollwait: %v, %v", n, err)
-		if err != nil {
-			if err == syscall.EAGAIN || err == syscall.EINTR {
-				continue
+func (e *epoll) waiter(out chan event) {
+	var events []event
+	var eventbuf [0x10]event
+
+	const msec = -1
+
+	for e.running {
+		if len(events) > 0 {
+			ev := events[0]
+			events = events[1:]
+
+			debug("epoll: wait: %0x, %p, fd: %v", ev.events, ev.getdata(), ev.getdata().fd)
+			out <- ev
+		} else if n, err := epollwait(e.pollfd, eventbuf[0:], msec); err != nil {
+			debug("epoll: epollwait: %s", err)
+			if err != syscall.EAGAIN && err != syscall.EINTR {
+				err = os.NewSyscallError("epoll_wait", err)
+				e.running = false
+				e.done <- err
 			}
-			return nil, os.NewSyscallError("epoll_wait", err)
+		} else if n > 0 {
+			debug("epoll: epollwait: %v", n)
+			events = eventbuf[0:n]
 		}
-		if n == 0 {
-			return nil, nil
-		}
-		e.events = e.eventbuf[0:n]
 	}
-	ev := e.events[0]
-	e.events = e.events[1:]
-	debug("epoll: wait: %0x, %p, fd: %v", ev.events, ev.getdata(), ev.getdata().fd)
-	return &ev, nil
 }
 
 func (e *epoll) WantEvents(p *Pollable, events uint32, oneshot bool) error {
@@ -124,6 +138,15 @@ func (e *epoll) WantEvents(p *Pollable, events uint32, oneshot bool) error {
 	}
 
 	return nil
+}
+
+func (e *epoll) Abort(err error) error {
+	e.abort <- err
+	return nil
+}
+
+func (e *epoll) Done() error {
+	return <-e.done
 }
 
 func epollCreate1() (uintptr, error) {
