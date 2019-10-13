@@ -54,6 +54,6 @@ func (p *Pollable) Close() error {
 
 type poller interface {
 	register(fd uintptr, h EventHandler, data interface{}) (*Pollable, error)
-	wantEvent(*Pollable, uint32, bool) error
+	WantEvents(*Pollable, uint32, bool) error
 	deregister(*Pollable) error
 }

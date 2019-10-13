@@ -120,11 +120,11 @@ func (p *WaitPollable) Close() error {
 }
 
 func (p *WaitPollable) wantRead() error {
-	return p.poller.wantEvent(p.Pollable, EPOLLIN, true)
+	return p.poller.WantEvents(p.Pollable, EPOLLIN, true)
 }
 
 func (p *WaitPollable) wantWrite() error {
-	return p.poller.wantEvent(p.Pollable, EPOLLOUT, true)
+	return p.poller.WantEvents(p.Pollable, EPOLLOUT, true)
 }
 
 // WaitRead waits for the WaitPollable to become ready for

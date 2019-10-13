@@ -96,7 +96,7 @@ func (e *epoll) wait() (*event, error) {
 	return &ev, nil
 }
 
-func (e *epoll) wantEvent(p *Pollable, events uint32, oneshot bool) error {
+func (e *epoll) WantEvents(p *Pollable, events uint32, oneshot bool) error {
 	if events == 0 {
 		events = EPOLLERR | EPOLLHUP
 	} else if oneshot {
@@ -110,7 +110,7 @@ func (e *epoll) wantEvent(p *Pollable, events uint32, oneshot bool) error {
 			events: events,
 		}
 		ev.setdata(p)
-		debug("epoll: wantEvent: %d,  %0x, %p", p.fd, ev.events, ev.getdata())
+		debug("epoll: WantEvents: %d,  %0x, %p", p.fd, ev.events, ev.getdata())
 
 		if err := epollctl(e.pollfd, syscall.EPOLL_CTL_MOD, p.fd, &ev); err != nil {
 			return err
