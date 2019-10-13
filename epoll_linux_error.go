@@ -58,6 +58,14 @@ type EventError struct {
 	revents uint32
 }
 
+func NewEventError(fd uintptr, revents uint32) EventError {
+	e := EventError{
+		fd:      fd,
+		revents: revents,
+	}
+	return e
+}
+
 func (e EventError) Error() string {
 	return fmt.Sprintf("epoll: Unexpected event %s (0x%x) on fd:%d",
 		EventNames(e.revents),
