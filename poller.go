@@ -40,7 +40,11 @@ func (p *Poller) RegisterHandler(fd uintptr, h EventHandler, data interface{}) (
 }
 
 func (p *Pollable) Fd() uintptr {
-	return p.fd
+	if p != nil {
+		return p.fd
+	} else {
+		return ClosedFd
+	}
 }
 
 func (p *Pollable) Close() error {
